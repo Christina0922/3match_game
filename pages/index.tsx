@@ -6,6 +6,30 @@ const COLORS = ['bg-red-500', 'bg-yellow-500', 'bg-green-500', 'bg-blue-500', 'b
 const GAME_TIME = 60; // 60 seconds
 const TARGET_SCORE = 1000;
 
+// Web Audio API를 사용하여 소리 생성 함수
+const createPopSound = () => {
+  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+
+  // 소리 설정 - 더 부드럽고 낮은 음으로 조정
+  oscillator.type = 'sine';
+  oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A4 음 (더 낮은 음)
+  gainNode.gain.setValueAtTime(0.15, audioContext.currentTime); // 볼륨 낮춤 (0.3 → 0.15)
+
+  // 소리 시작
+  oscillator.start();
+  
+  // 소리 감소 - 더 천천히 감소하도록 조정
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3); // 0.1 → 0.3
+  
+  // 소리 종료
+  oscillator.stop(audioContext.currentTime + 0.3); // 0.1 → 0.3
+};
+
 interface Tile {
   color: string;
   isRemoving: boolean;
@@ -91,12 +115,23 @@ export default function Home() {
 
   const playSound = (soundPath: string, repeat = 1) => {
     if (muted) return;
-    for (let i = 0; i < repeat; i++) {
+    
+    // 첫 번째 소리는 즉시 재생
+    createPopSound();
+
+    // 나머지 반복 소리는 약간의 딜레이를 두고 재생 (간격도 좀 더 길게)
+    for (let i = 1; i < repeat; i++) {
       setTimeout(() => {
-        const audio = new Audio(soundPath);
-        audio.play().catch(() => {});
-      }, i * 120);
+        createPopSound();
+      }, i * 200); // 150 → 200 (간격을 좀 더 길게)
     }
+  };
+
+  // 소리 파일 경로 상수 정의
+  const SOUNDS = {
+    POP: '/sounds/pop.mp3',
+    COMBO: '/sounds/combo.mp3',
+    MATCH: '/sounds/match.mp3'
   };
 
   const processManualMatch = async (tiles: TilePosition[]) => {
@@ -108,7 +143,14 @@ export default function Home() {
     newGrid[r2][c2].isRemoving = true;
     newGrid[r3][c3].isRemoving = true;
     setGrid(newGrid);
-    playSound('/sounds/pop.mp3', 3); // '뿅뿅뿅' 효과음
+    
+    // 소리 재생 - 정확히 3번만
+    if (!muted) {
+      createPopSound();
+      setTimeout(() => createPopSound(), 150);
+      setTimeout(() => createPopSound(), 300);
+    }
+    
     await new Promise(resolve => setTimeout(resolve, 300));
     // True gravity: for each column, let all tiles above fall down to fill empty spaces
     const columns = [c1, c2, c3];
@@ -143,13 +185,21 @@ export default function Home() {
 
   const handleTileClick = async (row: number, col: number) => {
     if (isProcessing || gameState !== 'playing') return;
+
     // 이미 선택된 타일이면 선택 해제(토글)
     if (selectedTiles.some(([r, c]) => r === row && c === col)) {
       setSelectedTiles(selectedTiles.filter(([r, c]) => !(r === row && c === col)));
       return;
     }
+
+    // 타일 선택 시 즉시 소리 재생
+    if (!muted) {
+      createPopSound();
+    }
+
     const newSelected: TilePosition[] = [...selectedTiles, [row, col]];
     setSelectedTiles(newSelected);
+
     if (newSelected.length === 3) {
       const [a, b, c] = newSelected;
       const colorA = grid[a[0]][a[1]].color;
@@ -158,13 +208,13 @@ export default function Home() {
       if (colorA === colorB && colorB === colorC) {
         await processManualMatch(newSelected);
       }
-      setTimeout(() => setSelectedTiles([]), 100); // 선택 초기화
+      setTimeout(() => setSelectedTiles([]), 100);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8">
-      <div className="max-w-2xl mx-auto relative">
+    <div className="min-h-screen bg-gray-100 py-4 sm:py-8">
+      <div className="max-w-2xl mx-auto relative px-2 sm:px-4">
         {/* Sound toggle button */}
         <button
           onClick={() => setMuted(m => !m)}
@@ -172,26 +222,26 @@ export default function Home() {
           aria-label={muted ? 'Unmute' : 'Mute'}
         >
           {muted ? (
-            <span role="img" aria-label="muted">🔇</span>
+            <HiVolumeOff className="w-5 h-5" />
           ) : (
-            <span role="img" aria-label="sound">🔊</span>
+            <HiVolumeUp className="w-5 h-5" />
           )}
         </button>
         <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-4">
-            <h2 className="text-2xl font-bold text-green-700 mb-2">LEVEL {level}</h2>
-            <h1 className="text-3xl font-bold text-gray-800">Match-3 Game</h1>
-            <div className="flex justify-center items-center gap-4">
-              <p className="text-xl text-gray-600">Score: {score}/{TARGET_SCORE}</p>
+          <div className="text-center mb-2 sm:mb-4">
+            <h2 className="text-xl sm:text-2xl font-bold text-green-700 mb-1 sm:mb-2">LEVEL {level}</h2>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Match-3 Game</h1>
+            <div className="flex justify-center items-center gap-2 sm:gap-4 text-sm sm:text-xl">
+              <p className="text-gray-600">Score: {score}/{TARGET_SCORE}</p>
               <div className="relative">
-                <p className="text-xl text-purple-600">Combo: {combo}x</p>
+                <p className="text-purple-600">Combo: {combo}x</p>
                 {showCombo && (
-                  <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 animate-bounce text-2xl font-bold text-purple-600">
+                  <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 animate-bounce text-xl sm:text-2xl font-bold text-purple-600">
                     {combo}x COMBO!
                   </div>
                 )}
               </div>
-              <p className="text-xl text-red-600">Time: {timeLeft}s</p>
+              <p className="text-red-600">Time: {timeLeft}s</p>
             </div>
             {showSpecialEffect && (
               <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-4xl font-bold text-yellow-400 animate-pulse">
@@ -215,18 +265,48 @@ export default function Home() {
               {gameState === 'playing' ? 'Restart Game' : 'New Game'}
             </button>
           </div>
-          <div className={`grid grid-cols-8 gap-1 bg-white p-4 rounded-lg shadow-lg transition-all duration-500 ${gameState !== 'playing' ? 'filter blur-sm brightness-75' : ''}`}>
+          <div className="grid gap-1 sm:gap-2" style={{ 
+            gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))`,
+            maxWidth: '100%',
+            aspectRatio: '1/1'
+          }}>
             {grid.map((row, rowIndex) =>
               row.map((tile, colIndex) => (
-                <div
+                <button
                   key={`${rowIndex}-${colIndex}`}
-                  className={`w-12 h-12 ${tile.color} rounded-lg cursor-pointer transition-all duration-300
-                    ${selectedTiles.some(([r, c]) => r === rowIndex && c === colIndex) ? 'ring-4 ring-blue-500' : ''}
-                    ${isProcessing ? 'pointer-events-none' : ''}
-                    ${tile.isRemoving ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}
-                    ${tile.isNew ? 'animate-bounce' : ''}
-                    ${tile.isSpecial ? 'ring-2 ring-yellow-400 animate-pulse' : ''}`}
                   onClick={() => handleTileClick(rowIndex, colIndex)}
+                  onTouchStart={(e) => {
+                    e.preventDefault(); // 기본 터치 동작 방지
+                    e.stopPropagation(); // 이벤트 버블링 방지
+                    handleTileClick(rowIndex, colIndex);
+                  }}
+                  onTouchEnd={(e) => {
+                    e.preventDefault(); // 기본 터치 동작 방지
+                    e.stopPropagation(); // 이벤트 버블링 방지
+                  }}
+                  className={`
+                    aspect-square w-full
+                    ${tile.color}
+                    ${tile.isRemoving ? 'animate-fade-out' : ''}
+                    ${tile.isNew ? 'animate-fade-in' : ''}
+                    ${selectedTiles.some(([r, c]) => r === rowIndex && c === colIndex) ? 'ring-4 ring-blue-500' : ''}
+                    transition-all duration-200
+                    rounded-lg
+                    transform active:scale-95
+                    focus:outline-none
+                    touch-manipulation
+                    select-none
+                    cursor-pointer
+                    touch-callout-none
+                    -webkit-tap-highlight-color: transparent
+                  `}
+                  style={{
+                    touchAction: 'manipulation',
+                    WebkitTouchCallout: 'none',
+                    WebkitUserSelect: 'none',
+                    userSelect: 'none'
+                  }}
+                  disabled={isProcessing || gameState !== 'playing'}
                 />
               ))
             )}

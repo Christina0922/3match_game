@@ -145,6 +145,7 @@ export default function Home() {
         setTimeout(() => {
           setShowLevelUp(false);
           setLevel(l => l + 1);
+          setScore(0);
           setGameState('playing');
         }, 1500);
       }

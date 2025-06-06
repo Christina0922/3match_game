@@ -244,7 +244,7 @@ export default function Home() {
       createPopSound(audioContextRef.current);
     }
 
-    const newSelected = [...selectedTiles, [row, col]];
+    const newSelected = [...selectedTiles, [row, col]] as TilePosition[];
     setSelectedTiles(newSelected);
 
     if (newSelected.length === 3) {

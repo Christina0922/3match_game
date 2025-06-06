@@ -7,8 +7,7 @@ const GAME_TIME = 60; // 60 seconds
 const TARGET_SCORE = 1000;
 
 // Web Audio API를 사용하여 소리 생성 함수
-const createPopSound = () => {
-  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+const createPopSound = (audioContext: AudioContext) => {
   const oscillator = audioContext.createOscillator();
   const gainNode = audioContext.createGain();
 
@@ -53,15 +52,30 @@ export default function Home() {
   const [specialEffectType, setSpecialEffectType] = useState<string>('');
   const [level, setLevel] = useState(1);
   const [muted, setMuted] = useState(false);
+  
+  // AudioContext를 ref로 관리
+  const audioContextRef = useRef<AudioContext | null>(null);
 
-  const matchSound = useRef<HTMLAudioElement | null>(null);
-  const comboSound = useRef<HTMLAudioElement | null>(null);
-  const popSound = useRef<HTMLAudioElement | null>(null);
+  // AudioContext 초기화 함수
+  const initAudioContext = () => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    // AudioContext가 일시 중지된 상태라면 재개
+    if (audioContextRef.current.state === 'suspended') {
+      audioContextRef.current.resume();
+    }
+  };
 
+  // 컴포넌트 마운트 시 AudioContext 초기화
   useEffect(() => {
-    matchSound.current = new Audio('/sounds/match.mp3');
-    comboSound.current = new Audio('/sounds/combo.mp3');
-    popSound.current = new Audio('/sounds/pop.mp3');
+    initAudioContext();
+    // 컴포넌트 언마운트 시 AudioContext 정리
+    return () => {
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -114,16 +128,23 @@ export default function Home() {
   }, [score]);
 
   const playSound = (soundPath: string, repeat = 1) => {
-    if (muted) return;
+    if (muted || !audioContextRef.current) return;
+    
+    // AudioContext가 일시 중지된 상태라면 재개
+    if (audioContextRef.current.state === 'suspended') {
+      audioContextRef.current.resume();
+    }
     
     // 첫 번째 소리는 즉시 재생
-    createPopSound();
+    createPopSound(audioContextRef.current);
 
     // 나머지 반복 소리는 약간의 딜레이를 두고 재생 (간격도 좀 더 길게)
     for (let i = 1; i < repeat; i++) {
       setTimeout(() => {
-        createPopSound();
-      }, i * 200); // 150 → 200 (간격을 좀 더 길게)
+        if (audioContextRef.current) {
+          createPopSound(audioContextRef.current);
+        }
+      }, i * 200);
     }
   };
 
@@ -145,10 +166,10 @@ export default function Home() {
     setGrid(newGrid);
     
     // 소리 재생 - 정확히 3번만
-    if (!muted) {
-      createPopSound();
-      setTimeout(() => createPopSound(), 150);
-      setTimeout(() => createPopSound(), 300);
+    if (!muted && audioContextRef.current) {
+      createPopSound(audioContextRef.current);
+      setTimeout(() => createPopSound(audioContextRef.current), 150);
+      setTimeout(() => createPopSound(audioContextRef.current), 300);
     }
     
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -186,6 +207,9 @@ export default function Home() {
   const handleTileClick = async (row: number, col: number) => {
     if (isProcessing || gameState !== 'playing') return;
 
+    // AudioContext 초기화 확인
+    initAudioContext();
+
     // 이미 선택된 타일이면 선택 해제(토글)
     if (selectedTiles.some(([r, c]) => r === row && c === col)) {
       setSelectedTiles(selectedTiles.filter(([r, c]) => !(r === row && c === col)));
@@ -193,8 +217,8 @@ export default function Home() {
     }
 
     // 타일 선택 시 즉시 소리 재생
-    if (!muted) {
-      createPopSound();
+    if (!muted && audioContextRef.current) {
+      createPopSound(audioContextRef.current);
     }
 
     const newSelected: TilePosition[] = [...selectedTiles, [row, col]];

@@ -351,7 +351,6 @@ export default function Home() {
             gridTemplateColumns: `repeat(${getGridSize(level)}, minmax(0, 1fr))`,
             maxWidth: 'min(100vw, 600px)',
             margin: '0 auto',
-            width: '100%',
             height: `${getTileSize(level) * getGridSize(level)}px`
           }}>
             {grid.map((row, i) =>

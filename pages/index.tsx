@@ -347,11 +347,11 @@ export default function Home() {
               {gameState === 'playing' ? 'Restart Game' : 'New Game'}
             </button>
           </div>
-          <div className="grid gap-1 sm:gap-2" style={{ 
+          <div className="grid gap-4 sm:gap-6" style={{ 
             gridTemplateColumns: `repeat(${getGridSize(level)}, minmax(0, 1fr))`,
-            maxWidth: '100%',
+            maxWidth: 'min(100vw, 600px)',
             margin: '0 auto',
-            width: `${getTileSize(level) * getGridSize(level)}px`,
+            width: '100%',
             height: `${getTileSize(level) * getGridSize(level)}px`
           }}>
             {grid.map((row, i) =>

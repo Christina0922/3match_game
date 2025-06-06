@@ -136,12 +136,10 @@ export default function Home() {
   useEffect(() => {
     if (score >= getTargetScore(level)) {
       if (level >= MAX_LEVEL) {
-        // 모든 레벨 클리어
         setTimeout(() => {
           setGameState('completed');
         }, 1000);
-      } else {
-        // 다음 레벨로
+      } else if (!showLevelUp) {
         setClearedLevel(level);
         setShowLevelUp(true);
         setTimeout(() => {

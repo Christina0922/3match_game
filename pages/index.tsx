@@ -14,9 +14,11 @@ interface Tile {
   specialType?: 'row' | 'column' | 'color';
 }
 
+type TilePosition = [number, number];
+
 export default function Home() {
   const [grid, setGrid] = useState<Tile[][]>([]);
-  const [selectedTiles, setSelectedTiles] = useState<[number, number][]>([]);
+  const [selectedTiles, setSelectedTiles] = useState<TilePosition[]>([]);
   const [score, setScore] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [combo, setCombo] = useState(0);
@@ -97,7 +99,7 @@ export default function Home() {
     }
   };
 
-  const processManualMatch = async (tiles: [number, number][]) => {
+  const processManualMatch = async (tiles: TilePosition[]) => {
     setIsProcessing(true);
     const [[r1, c1], [r2, c2], [r3, c3]] = tiles;
     // Remove the selected tiles
@@ -146,7 +148,7 @@ export default function Home() {
       setSelectedTiles(selectedTiles.filter(([r, c]) => !(r === row && c === col)));
       return;
     }
-    const newSelected = [...selectedTiles, [row, col]];
+    const newSelected: TilePosition[] = [...selectedTiles, [row, col]];
     setSelectedTiles(newSelected);
     if (newSelected.length === 3) {
       const [a, b, c] = newSelected;

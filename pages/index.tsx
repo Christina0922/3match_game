@@ -24,9 +24,9 @@ const getGridSize = (level: number) => {
 // 레벨별 타일 크기 계산 함수
 const getTileSize = (level: number) => {
   const gridSize = getGridSize(level);
-  // 기본 컨테이너 크기 (예: 400px)
-  const containerSize = 400;
-  // 그리드 크기에 따라 타일 크기 계산
+  // 모바일/PC 구분
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+  const containerSize = isMobile ? 320 : 600;
   const tileSize = Math.floor(containerSize / gridSize);
   return tileSize;
 };
@@ -347,9 +347,9 @@ export default function Home() {
               {gameState === 'playing' ? 'Restart Game' : 'New Game'}
             </button>
           </div>
-          <div className="grid gap-4 sm:gap-6 px-4 sm:px-0" style={{ 
+          <div className="grid gap-6 sm:gap-8 px-4 sm:px-0" style={{ 
             gridTemplateColumns: `repeat(${getGridSize(level)}, minmax(0, 1fr))`,
-            maxWidth: 'min(100vw, 600px)',
+            maxWidth: '100vw',
             margin: '0 auto',
             height: `${getTileSize(level) * getGridSize(level)}px`
           }}>

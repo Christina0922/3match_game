@@ -347,7 +347,7 @@ export default function Home() {
               {gameState === 'playing' ? 'Restart Game' : 'New Game'}
             </button>
           </div>
-          <div className="grid gap-4 sm:gap-6" style={{ 
+          <div className="grid gap-4 sm:gap-6 px-4 sm:px-0" style={{ 
             gridTemplateColumns: `repeat(${getGridSize(level)}, minmax(0, 1fr))`,
             maxWidth: 'min(100vw, 600px)',
             margin: '0 auto',
